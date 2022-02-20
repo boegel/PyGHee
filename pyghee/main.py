@@ -9,10 +9,11 @@
 # license: GPLv2
 #
 import flask
+import traceback
 import waitress
 
 from .events import handle_event, init_github, log_event, verify_request
-from .utils import log
+from .utils import log, log_warning
 
 
 def create_app(gh):
@@ -23,9 +24,13 @@ def create_app(gh):
 
     @app.route('/', methods=['POST'])
     def main():
-        log_event(flask.request)
-        verify_request(flask.request, flask.abort)
-        handle_event(gh, flask.request)
+        try:
+            log_event(flask.request)
+            verify_request(flask.request, flask.abort)
+            handle_event(gh, flask.request)
+        except Exception as err:
+            tb_txt = ''.join(traceback.format_exception(None, err, err.__traceback__))
+            log_warning("A crash occurred!\n" + tb_txt)
         return ''
 
     return app
