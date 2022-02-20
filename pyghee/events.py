@@ -59,7 +59,7 @@ def log_event(request):
     event_date = event_ts.isoformat().split('T')[0]
     event_time = event_ts.isoformat().split('T')[1].split('.')[0].replace(':', '-')
 
-    event_log_fn = '%s_%s' % (event_time, event_id)
+    event_log_fn = '%sT%s_%s' % (event_date, event_time, event_id)
 
     event_log_path = os.path.join(EVENTS_LOG_DIR, event_type, event_action, event_date, event_log_fn)
     create_file(event_log_path + '_headers.json', pprint.pformat(dict(request.headers)))
