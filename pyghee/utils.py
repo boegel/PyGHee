@@ -10,8 +10,18 @@ import datetime
 import os
 import sys
 
-
 LOG = os.path.join(os.getcwd(), 'pyghee.log')
+
+
+def create_file(path, txt):
+    """
+    Create file at specified path with specified contents.
+    """
+    parent_dir = os.path.dirname(path)
+    if not os.path.exists(parent_dir):
+        os.makedirs(parent_dir)
+    with open(path, 'w') as fp:
+        fp.write(txt)
 
 
 def error(msg):

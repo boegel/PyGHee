@@ -6,13 +6,15 @@
 #
 # license: GPLv2
 #
+import datetime
 import hmac
 import github
 import os
 import pprint
 
-from .utils import error, log, warn
+from .utils import create_file, error, log, warn
 
+EVENTS_LOG_DIR = os.path.join(os.getcwd(), 'events_log')
 GITHUB_APP_SECRET_TOKEN = None
 SHA1 = 'sha1'
 
@@ -45,14 +47,21 @@ def log_event(request):
     """
     Log event data
     """
+    event_id = request.headers['X-Request-Id']
+    event_ts_raw = request.headers['Timestamp']
     event_type = request.headers['X-GitHub-Event']
-    msg_txt = '\n'.join([
-        "Event type: %s" % event_type,
-        "Request headers: %s" % pprint.pformat(dict(request.headers)),
-        "Request body: %s" % pprint.pformat(request.json),
-        '',
-    ])
-    log(msg_txt)
+
+    event_ts = datetime.datetime.fromtimestamp(event_ts_raw/1000.)
+    event_date = event_ts.isoformat().split('T')[0]
+    event_time = event_ts.isoformat().split('T')[1].split('.')[0].split(':')[0]
+
+    event_log_fn = '%s_%s' % (event_time, event_id)
+
+    event_log_path = os.path.join(EVENTS_LOG_DIR, event_type, event_date, event_time, event_log_fn)
+    create_file(event_log_path + '_headers.json', pprint.pformat(dict(request.headers)))
+    create_file(event_log_path + '_body.json', pprint.pformat(request.json))
+
+    log("Event received (id: %s, type: %s), event data logged at %s" % (event_id, event_type, event_log_path))
 
 
 def verify_request(request, abort_function):
