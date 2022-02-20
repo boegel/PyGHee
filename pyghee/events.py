@@ -13,7 +13,7 @@ import json
 import os
 import traceback
 
-from .handlers import handle_issue_comment
+from .handlers import handle_create_event, handle_issue_comment_event
 from .utils import create_file, error, log, log_warning
 
 EVENTS_LOG_DIR = os.path.join(os.getcwd(), 'events_log')
@@ -56,7 +56,8 @@ def handle_event(gh, request, log_file=None):
     event_type = event_info[1]
 
     event_handlers = {
-        'issue_comment': handle_issue_comment,
+        'create': handle_create_event,
+        'issue_comment': handle_issue_comment_event,
     }
     handler = event_handlers.get(event_type)
     if handler is None:

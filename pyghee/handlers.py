@@ -9,7 +9,14 @@
 from .utils import log
 
 
-def handle_issue_comment(gh, request, log_file=None):
+def handle_create_event(gh, request, log_file=None):
+    """
+    Handle create event (new branch, for example).
+    """
+    log("create event handled!", log_file=log_file)
+
+
+def handle_issue_comment_event(gh, request, log_file=None):
     """
     Handle adding/removing of comment in issue or PR.
     """
