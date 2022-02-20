@@ -43,7 +43,7 @@ def handle_event(gh, request):
     event_type = request.headers["X-GitHub-Event"]
     event_action = request.json['action']
     tup = (event_id, event_type, event_action)
-    log("WARNING: event (id: %s, type: %s, action: %d) was received but left unhandled!" % tup)
+    log("WARNING: event (id: %s, type: %s, action: %s) was received but left unhandled!" % tup)
 
 
 def log_event(request):
@@ -55,7 +55,7 @@ def log_event(request):
     event_type = request.headers['X-GitHub-Event']
     event_action = request.json['action']
 
-    event_ts = datetime.datetime.fromtimestamp(event_ts_raw/1000.)
+    event_ts = datetime.datetime.fromtimestamp(int(event_ts_raw)/1000.)
     event_date = event_ts.isoformat().split('T')[0]
     event_time = event_ts.isoformat().split('T')[1].split('.')[0].split(':')[0]
 
