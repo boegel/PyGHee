@@ -17,6 +17,7 @@ from .utils import create_file, error, log, log_warning
 EVENTS_LOG_DIR = os.path.join(os.getcwd(), 'events_log')
 GITHUB_APP_SECRET_TOKEN = None
 SHA1 = 'sha1'
+UNKNOWN = 'UNKNOWN'
 
 
 def init_github():
@@ -35,25 +36,30 @@ def init_github():
     return gh
 
 
+def get_basic_event_info(request):
+    """
+    Get basic event info: event ID, type, action
+    """
+    event_id = request.headers['X-Request-Id']
+    event_type = request.headers["X-GitHub-Event"]
+    event_action = request.json.get('action', UNKNOWN)
+    return (event_id, event_type, event_action)
+
+
 def handle_event(gh, request):
     """
     Handle event
     """
-    event_id = request.headers['X-Request-Id']
-    event_type = request.headers["X-GitHub-Event"]
-    event_action = request.json['action']
-    tup = (event_id, event_type, event_action)
-    log_warning("Event (id: %s, type: %s, action: %s) was received but left unhandled!" % tup)
+    msg = "Event (id: %s, type: %s, action: %s) was received but left unhandled!"
+    log_warning(msg % get_basic_event_info(request))
 
 
 def log_event(request):
     """
     Log event data
     """
-    event_id = request.headers['X-Request-Id']
+    event_id, event_type, event_action = get_basic_event_info(request)
     event_ts_raw = request.headers['Timestamp']
-    event_type = request.headers['X-GitHub-Event']
-    event_action = request.json['action']
 
     event_ts = datetime.datetime.fromtimestamp(int(event_ts_raw)/1000.)
     event_date = event_ts.isoformat().split('T')[0]
