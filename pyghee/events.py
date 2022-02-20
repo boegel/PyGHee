@@ -76,7 +76,7 @@ def log_event(request, events_log_dir=None, log_file=None):
     event_id, event_type, event_action = get_basic_event_info(request)
     event_ts_raw = request.headers['Timestamp']
 
-    event_ts = datetime.datetime.fromtimestamp(int(event_ts_raw)/1000.)
+    event_ts = datetime.datetime.utcfromtimestamp(int(event_ts_raw)/1000.)
     event_date = event_ts.isoformat().split('T')[0]
     event_time = event_ts.isoformat().split('T')[1].split('.')[0].replace(':', '-')
 

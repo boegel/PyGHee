@@ -49,8 +49,8 @@ def test_process_event(tmpdir):
     event_data_dir = os.path.join(events_log_dir, 'issue_comment', 'created', '2022-02-20')
     assert os.path.isdir(event_data_dir)
 
-    header_fp = '2022-02-20T15-23-27_%s_headers.json' % REQUEST_ID_001
-    body_fp = '2022-02-20T15-23-27_%s_body.json' % REQUEST_ID_001
+    header_fp = '2022-02-20T14-23-27_%s_headers.json' % REQUEST_ID_001
+    body_fp = '2022-02-20T14-23-27_%s_body.json' % REQUEST_ID_001
     assert sorted(os.listdir(event_data_dir)) == [body_fp, header_fp]
 
     # verify saved event header
