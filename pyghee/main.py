@@ -12,6 +12,7 @@ import flask
 import waitress
 
 from .events import handle_event, init_github, log_event, verify_request
+from .utils import log
 
 
 def create_app(gh):
@@ -33,4 +34,5 @@ def create_app(gh):
 if __name__ == '__main__':
     gh = init_github()
     app = create_app(gh)
+    log("App started!")
     waitress.serve(app, listen='*:3000')

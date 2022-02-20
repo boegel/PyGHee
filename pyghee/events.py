@@ -39,8 +39,11 @@ def handle_event(gh, request):
     """
     Handle event
     """
+    event_id = request.headers['X-Request-Id']
     event_type = request.headers["X-GitHub-Event"]
-    warn("Event (type: %s) was received but left unhandled!" % event_type)
+    event_action = request.json['action']
+    tup = (event_id, event_type, event_action)
+    log("WARNING: event (id: %s, type: %s, action: %d) was received but left unhandled!" % tup)
 
 
 def log_event(request):
@@ -50,6 +53,7 @@ def log_event(request):
     event_id = request.headers['X-Request-Id']
     event_ts_raw = request.headers['Timestamp']
     event_type = request.headers['X-GitHub-Event']
+    event_action = request.json['action']
 
     event_ts = datetime.datetime.fromtimestamp(event_ts_raw/1000.)
     event_date = event_ts.isoformat().split('T')[0]
@@ -57,11 +61,12 @@ def log_event(request):
 
     event_log_fn = '%s_%s' % (event_time, event_id)
 
-    event_log_path = os.path.join(EVENTS_LOG_DIR, event_type, event_date, event_time, event_log_fn)
+    event_log_path = os.path.join(EVENTS_LOG_DIR, event_type, event_action, event_date, event_time, event_log_fn)
     create_file(event_log_path + '_headers.json', pprint.pformat(dict(request.headers)))
     create_file(event_log_path + '_body.json', pprint.pformat(request.json))
 
-    log("Event received (id: %s, type: %s), event data logged at %s" % (event_id, event_type, event_log_path))
+    tup = (event_id, event_type, event_action, event_log_path)
+    log("Event received (id: %s, type: %s, action: %s), event data logged at %s" % tup)
 
 
 def verify_request(request, abort_function):
