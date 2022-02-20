@@ -12,7 +12,7 @@ import github
 import os
 import pprint
 
-from .utils import create_file, error, log, warn
+from .utils import create_file, error, log, log_warning
 
 EVENTS_LOG_DIR = os.path.join(os.getcwd(), 'events_log')
 GITHUB_APP_SECRET_TOKEN = None
@@ -43,7 +43,7 @@ def handle_event(gh, request):
     event_type = request.headers["X-GitHub-Event"]
     event_action = request.json['action']
     tup = (event_id, event_type, event_action)
-    log("WARNING: event (id: %s, type: %s, action: %s) was received but left unhandled!" % tup)
+    log_warning("Event (id: %s, type: %s, action: %s) was received but left unhandled!" % tup)
 
 
 def log_event(request):
@@ -86,7 +86,7 @@ def verify_request(request, abort_function):
     header_signature = request.headers.get('X-Hub-Signature')
     # if no signature is found, the request is forbidden
     if header_signature is None:
-        log("Missing signature in request header => 403")
+        log_warning("Missing signature in request header => 403")
         abort_function(403)
     else:
         signature_type, signature = header_signature.split('=')
@@ -96,9 +96,9 @@ def verify_request(request, abort_function):
             if hmac.compare_digest(str(mac.hexdigest()), str(signature)):
                 log("Request verified: signature OK!")
             else:
-                log("Faulty signature in request header => 403")
+                log_warning("Faulty signature in request header => 403")
                 abort_function(403)
         else:
             # we only know how to verify a SHA1 signature
-            log("Uknown type of signature (%s) => 501" % signature_type)
+            log_warning("Uknown type of signature (%s) => 501" % signature_type)
             abort_function(501)

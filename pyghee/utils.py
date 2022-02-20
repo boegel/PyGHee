@@ -25,7 +25,9 @@ def create_file(path, txt):
 
 
 def error(msg):
-    """Print error message and exit."""
+    """
+    Print error message and exit
+    """
     sys.stderr.write("ERROR: %s\n" % msg)
     sys.exit(1)
 
@@ -39,5 +41,15 @@ def log(msg):
         fh.write('[' + timestamp + '] ' + msg + '\n')
 
 
+def log_warning(msg):
+    """
+    Log warning message
+    """
+    log("WARNING: %s" % msg)
+
+
 def warn(msg):
+    """
+    Print warning message
+    """
     sys.stderr.write("WARNING: %s\n" % msg)
