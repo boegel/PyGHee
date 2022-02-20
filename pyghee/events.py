@@ -9,8 +9,8 @@
 import datetime
 import hmac
 import github
+import json
 import os
-import pprint
 
 from .utils import create_file, error, log, log_warning
 
@@ -62,8 +62,8 @@ def log_event(request):
     event_log_fn = '%sT%s_%s' % (event_date, event_time, event_id)
 
     event_log_path = os.path.join(EVENTS_LOG_DIR, event_type, event_action, event_date, event_log_fn)
-    create_file(event_log_path + '_headers.json', pprint.pformat(dict(request.headers)))
-    create_file(event_log_path + '_body.json', pprint.pformat(request.json))
+    create_file(event_log_path + '_headers.json', json.dumps(dict(request.headers), sort_keys=True, indent=4))
+    create_file(event_log_path + '_body.json', json.dumps(request.json, sort_keys=True, indent=4))
 
     tup = (event_id, event_type, event_action, event_log_path)
     log("Event received (id: %s, type: %s, action: %s), event data logged at %s" % tup)
