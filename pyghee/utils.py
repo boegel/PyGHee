@@ -10,8 +10,6 @@ import datetime
 import os
 import sys
 
-LOG = os.path.join(os.getcwd(), 'pyghee.log')
-
 
 def create_file(path, txt):
     """
@@ -32,20 +30,23 @@ def error(msg):
     sys.exit(1)
 
 
-def log(msg):
+def log(msg, log_file=None):
     """
     Log message
     """
-    with open(LOG, 'a') as fh:
+    if log_file is None:
+        log_file = os.path.join(os.getcwd(), 'pyghee.log')
+
+    with open(log_file, 'a') as fh:
         timestamp = datetime.datetime.now().strftime("%Y%m%d-T%H:%M:%S")
         fh.write('[' + timestamp + '] ' + msg + '\n')
 
 
-def log_warning(msg):
+def log_warning(msg, log_file=None):
     """
     Log warning message
     """
-    log("WARNING: %s" % msg)
+    log("WARNING: %s" % msg, log_file=log_file)
 
 
 def warn(msg):
