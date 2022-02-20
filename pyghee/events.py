@@ -11,6 +11,7 @@ import hmac
 import github
 import json
 import os
+import traceback
 
 from .utils import create_file, error, log, log_warning
 
@@ -108,3 +109,17 @@ def verify_request(request, abort_function):
             # we only know how to verify a SHA1 signature
             log_warning("Uknown type of signature (%s) => 501" % signature_type)
             abort_function(501)
+
+
+def process_event(event_data, gh, abort_function):
+    """
+    Process a single event (log + verify + handle).
+    Logs a warning in case of crash while processing event.
+    """
+    try:
+        log_event(event_data)
+        verify_request(event_data, abort_function)
+        handle_event(gh, event_data)
+    except Exception as err:
+        tb_txt = ''.join(traceback.format_exception(None, err, err.__traceback__))
+        log_warning("A crash occurred!\n" + tb_txt)
