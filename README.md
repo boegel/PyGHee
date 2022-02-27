@@ -25,6 +25,14 @@ In addition:
 * a [GitHub Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) must be available via the `$GITHUB_TOKEN` environment variable;
 * the [GitHub app secret token](https://docs.github.com/en/developers/webhooks-and-events/webhooks/securing-your-webhooks) must be available via the `$GITHUB_APP_SECRET_TOKEN` environment variable;
 
+## Installation
+
+`PyGHee` is available on [PyPI](https://pypi.org/project/PyGHee/), so you can install it with `pip` (or another standard Python package installation tool):
+
+```
+pip3 install PyGHee
+```
+
 ## Using PyGHee
 
 To use `PyGHee`, you should implement a Python class that derives from the `PyGHee` class that is provided by the `pyghee.lib` module,
