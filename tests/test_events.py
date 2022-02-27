@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import re
@@ -10,9 +11,11 @@ from tests.event_data import CREATE_BRANCH_REQUEST, ISSUE_COMMENT_CREATED_REQUES
 
 TEST_REQUESTS = (CREATE_BRANCH_REQUEST, ISSUE_COMMENT_CREATED_REQUEST)
 
+TEST_SECRET_TOKEN = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
 
-def dummy_abort_function(_):
-    raise Exception("abort!")
+
+def dummy_abort_function(abort_code):
+    raise Exception("abort! (%s)" % abort_code)
 
 
 def test_get_event_info():
@@ -77,3 +80,19 @@ def test_process_event(tmpdir):
         with open(log_file, 'r') as fp:
             txt = fp.read()
             assert regex.search(txt)
+
+
+def test_verify_request(tmpdir):
+    """
+    Test verification of request, using test secret app token and empty string as request data
+    """
+    log_file = os.path.join(tmpdir, 'pyghee.log')
+
+    os.environ['GITHUB_TOKEN'] = 'fake_token'
+    os.environ['GITHUB_APP_SECRET_TOKEN'] = TEST_SECRET_TOKEN
+
+    pyghee = ExamplePyGHee()
+    request = copy.deepcopy(ISSUE_COMMENT_CREATED_REQUEST)
+    request.headers['X-Hub-Signature'] = 'sha1=1b96b55ff0ef92529c2ecb63a737a113d3b2979d'
+
+    pyghee.verify_request(get_event_info(request), dummy_abort_function, log_file=log_file)

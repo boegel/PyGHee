@@ -122,19 +122,24 @@ class PyGHee(flask.Flask):
             log_warning("Missing signature in request header => 403", log_file=log_file)
             abort_function(403)
         else:
-            signature_type, signature = header_signature.split('=')
-            if signature_type == SHA1:
-                # see https://docs.python.org/3/library/hmac.html
-                request_data = event_info['raw_request_data']
-                mac = hmac.new(self.github_app_secret_token.encode(), msg=request_data, digestmod=SHA1)
-                if hmac.compare_digest(str(mac.hexdigest()), str(signature)):
-                    log("Request verified: signature OK!", log_file=log_file)
+            header_parts = header_signature.split('=')
+            if len(header_parts) == 2:
+                signature_type, signature = header_parts
+                if signature_type == SHA1:
+                    # see https://docs.python.org/3/library/hmac.html
+                    request_data = event_info['raw_request_data']
+                    mac = hmac.new(self.github_app_secret_token.encode(), msg=request_data, digestmod=SHA1)
+                    if hmac.compare_digest(str(mac.hexdigest()), str(signature)):
+                        log("Request verified: signature OK!", log_file=log_file)
+                    else:
+                        log_warning("Faulty signature in request header => 403", log_file=log_file)
+                        abort_function(403)
                 else:
-                    log_warning("Faulty signature in request header => 403", log_file=log_file)
-                    abort_function(403)
+                    # we only know how to verify a SHA1 signature
+                    log_warning("Uknown type of signature (%s) => 501" % signature_type, log_file=log_file)
+                    abort_function(501)
             else:
-                # we only know how to verify a SHA1 signature
-                log_warning("Uknown type of signature (%s) => 501" % signature_type, log_file=log_file)
+                log_warning("Type of signature not specified (%s) => 501" % header_signature, log_file=log_file)
                 abort_function(501)
 
     def process_event(self, request, abort_function,
