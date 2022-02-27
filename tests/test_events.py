@@ -1,11 +1,11 @@
 import json
-import github
 import os
 import re
 
-from pyghee.events import get_basic_event_info, process_event
+from pyghee.lib import get_basic_event_info
+from pyghee.main import ExamplePyGHee
 
-from tests.event_data import ACTION_CREATED, EVENT_TYPE_ISSUE_COMMENT, REQUEST_ID_001, TIMESTAMP_001
+from tests.event_data import REQUEST_ID_001, TIMESTAMP_001
 from tests.event_data import CREATE_BRANCH_EVENT, ISSUE_COMMENT_CREATED_EVENT
 
 EVENT_DATA = (CREATE_BRANCH_EVENT, ISSUE_COMMENT_CREATED_EVENT)
@@ -28,14 +28,16 @@ def test_process_event(tmpdir):
     events_log_dir = os.path.join(tmpdir, 'events_log_dir')
     log_file = os.path.join(tmpdir, 'pyghee.log')
 
-    gh = github.Github()
+    os.environ['GITHUB_TOKEN'] = 'fake_token'
+    os.environ['GITHUB_APP_SECRET_TOKEN'] = 'fake_app_secret_token'
+    pyghee = ExamplePyGHee()
 
     for event_data in EVENT_DATA:
         event_type = event_data.headers['X-GitHub-Event']
         event_action = event_data.json.get('action', 'UNKNOWN')
 
-        process_event(event_data, gh, dummy_abort_function, events_log_dir=events_log_dir,
-                      log_file=log_file, raise_error=True, verify=False)
+        pyghee.process_event(event_data, dummy_abort_function, events_log_dir=events_log_dir,
+                             log_file=log_file, raise_error=True, verify=False)
 
         # check whether event data has been saved to events log dir
         event_data_dir = os.path.join(events_log_dir, event_type, event_action, '2022-02-20')

@@ -8,29 +8,28 @@
 #
 # license: GPLv2
 #
-import flask
 import waitress
 
-from .events import init_github, process_event
+from .lib import PyGHee, create_app
 from .utils import log
 
 
-def create_app(gh):
-    """
-    Create Flask app.
-    """
-    app = flask.Flask('pyghee')
+class ExamplePyGHee(PyGHee):
 
-    @app.route('/', methods=['POST'])
-    def main():
-        process_event(flask.request, gh, flask.abort)
-        return ''
+    def handle_create_event(self, request, log_file=None):
+        """
+        Handle create event (new branch, for example).
+        """
+        log("create event handled!", log_file=log_file)
 
-    return app
+    def handle_issue_comment_event(self, request, log_file=None):
+        """
+        Handle adding/removing of comment in issue or PR.
+        """
+        log("issue_comment event handled!", log_file=log_file)
 
 
 if __name__ == '__main__':
-    gh = init_github()
-    app = create_app(gh)
+    app = create_app(klass=ExamplePyGHee)
     log("App started!")
     waitress.serve(app, listen='*:3000')
