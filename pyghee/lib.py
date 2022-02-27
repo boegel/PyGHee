@@ -21,14 +21,30 @@ SHA1 = 'sha1'
 UNKNOWN = 'UNKNOWN'
 
 
-def get_basic_event_info(request):
+def get_event_info(request):
     """
-    Get basic event info: event ID, type, action
+    Extract event info from raw header data, and return result as Python dictionary value
     """
-    event_id = request.headers['X-Request-Id']
-    event_type = request.headers["X-GitHub-Event"]
-    event_action = request.json.get('action', UNKNOWN)
-    return (event_id, event_type, event_action)
+    event_info = {
+        'action': request.json.get('action', UNKNOWN),
+        'id': request.headers['X-Request-Id'],
+        'signature-sha1': request.headers['X-Hub-Signature'],
+        'timestamp_raw': request.headers['Timestamp'],
+        'type': request.headers['X-GitHub-Event'],
+    }
+
+    event_info.update({
+        'raw_request_body': request.json,
+        'raw_request_data': request.data,
+        'raw_request_headers': dict(request.headers),
+    })
+
+    timestamp = datetime.datetime.utcfromtimestamp(int(event_info['timestamp_raw'])/1000.)
+    event_info['timestamp'] = timestamp
+    event_info['date'] = timestamp.isoformat().split('T')[0]
+    event_info['time'] = timestamp.isoformat().split('T')[1].split('.')[0].replace(':', '-')
+
+    return event_info
 
 
 class PyGHee(flask.Flask):
@@ -54,54 +70,53 @@ class PyGHee(flask.Flask):
         else:
             del os.environ['GITHUB_APP_SECRET_TOKEN']
 
-    def handle_event(self, request, log_file=None):
+    def handle_event(self, event_info, log_file=None):
         """
         Handle event
         """
-        event_info = get_basic_event_info(request)
-        event_type = event_info[1]
+        event_type = event_info['type']
 
         handler_method_name = 'handle_%s_event' % event_type
         handler = getattr(self, handler_method_name, None)
 
         if handler is None:
-            msg = "[event id %s] No handler found for event type '%s' (action: %s) - "
+            msg = "[event id %(id)s] No handler found for event type '%(type)s' (action: %(action)s) - "
             msg += "event was received but left unhandled!"
             log_warning(msg % event_info, log_file=log_file)
         else:
-            log("[event id %s] Handler found for event type '%s' (action: %s)" % event_info)
-            handler(request, log_file=log_file)
+            log("[event id %(id)s] Handler found for event type '%(type)s' (action: %(action)s)" % event_info)
+            handler(event_info, log_file=log_file)
 
-    def log_event(self, request, events_log_dir=None, log_file=None):
+    def log_event(self, event_info, events_log_dir=None, log_file=None):
         """
         Log event data
         """
         if events_log_dir is None:
             events_log_dir = os.path.join(os.getcwd(), 'events_log')
 
-        event_id, event_type, event_action = get_basic_event_info(request)
-        event_ts_raw = request.headers['Timestamp']
+        event_action = event_info['action']
+        event_date = event_info['date']
+        event_id = event_info['id']
+        event_type = event_info['type']
+        raw_request_body = event_info['raw_request_body']
+        raw_request_headers = event_info['raw_request_headers']
 
-        event_ts = datetime.datetime.utcfromtimestamp(int(event_ts_raw)/1000.)
-        event_date = event_ts.isoformat().split('T')[0]
-        event_time = event_ts.isoformat().split('T')[1].split('.')[0].replace(':', '-')
-
-        event_log_fn = '%sT%s_%s' % (event_date, event_time, event_id)
+        event_log_fn = '%sT%s_%s' % (event_date, event_info['time'], event_id)
 
         event_log_path = os.path.join(events_log_dir, event_type, event_action, event_date, event_log_fn)
-        create_file(event_log_path + '_headers.json', json.dumps(dict(request.headers), sort_keys=True, indent=4))
-        create_file(event_log_path + '_body.json', json.dumps(request.json, sort_keys=True, indent=4))
+        create_file(event_log_path + '_headers.json', json.dumps(raw_request_headers, sort_keys=True, indent=4))
+        create_file(event_log_path + '_body.json', json.dumps(raw_request_body, sort_keys=True, indent=4))
 
         tup = (event_id, event_type, event_action, event_log_path)
         log("Event received (id: %s, type: %s, action: %s), event data logged at %s" % tup, log_file=log_file)
 
-    def verify_request(self, request, abort_function, log_file=None):
+    def verify_request(self, event_info, abort_function, log_file=None):
         """
         Verify request by checking webhook secret in request header.
         Webhook secret must also be available in $GITHUB_APP_SECRET_TOKEN environment variable.
         """
 
-        header_signature = request.headers.get('X-Hub-Signature')
+        header_signature = event_info['signature-sha1']
         # if no signature is found, the request is forbidden
         if header_signature is None:
             log_warning("Missing signature in request header => 403", log_file=log_file)
@@ -110,7 +125,8 @@ class PyGHee(flask.Flask):
             signature_type, signature = header_signature.split('=')
             if signature_type == SHA1:
                 # see https://docs.python.org/3/library/hmac.html
-                mac = hmac.new(self.github_app_secret_token.encode(), msg=request.data, digestmod=SHA1)
+                request_data = event_info['raw_request_data']
+                mac = hmac.new(self.github_app_secret_token.encode(), msg=request_data, digestmod=SHA1)
                 if hmac.compare_digest(str(mac.hexdigest()), str(signature)):
                     log("Request verified: signature OK!", log_file=log_file)
                 else:
@@ -121,17 +137,18 @@ class PyGHee(flask.Flask):
                 log_warning("Uknown type of signature (%s) => 501" % signature_type, log_file=log_file)
                 abort_function(501)
 
-    def process_event(self, event_data, abort_function,
+    def process_event(self, request, abort_function,
                       events_log_dir=None, log_file=None, raise_error=False, verify=True):
         """
         Process a single event (log + verify + handle).
         Logs a warning in case of crash while processing event.
         """
         try:
-            self.log_event(event_data, events_log_dir=events_log_dir, log_file=log_file)
+            event_info = get_event_info(request)
+            self.log_event(event_info, events_log_dir=events_log_dir, log_file=log_file)
             if verify:
-                self.verify_request(event_data, abort_function, log_file=log_file)
-            self.handle_event(event_data, log_file=log_file)
+                self.verify_request(event_info, abort_function, log_file=log_file)
+            self.handle_event(event_info, log_file=log_file)
         except Exception as err:
             if raise_error:
                 raise

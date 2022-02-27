@@ -2,25 +2,27 @@ import json
 import os
 import re
 
-from pyghee.lib import get_basic_event_info
+from pyghee.lib import get_event_info
 from pyghee.main import ExamplePyGHee
 
 from tests.event_data import REQUEST_ID_001, TIMESTAMP_001
-from tests.event_data import CREATE_BRANCH_EVENT, ISSUE_COMMENT_CREATED_EVENT
+from tests.event_data import CREATE_BRANCH_REQUEST, ISSUE_COMMENT_CREATED_REQUEST
 
-EVENT_DATA = (CREATE_BRANCH_EVENT, ISSUE_COMMENT_CREATED_EVENT)
+TEST_REQUESTS = (CREATE_BRANCH_REQUEST, ISSUE_COMMENT_CREATED_REQUEST)
 
 
 def dummy_abort_function(_):
     raise Exception("abort!")
 
 
-def test_get_basic_event_info():
-    for event_data in EVENT_DATA:
-        event_type = event_data.headers['X-GitHub-Event']
-        event_action = event_data.json.get('action', 'UNKNOWN')
-        expected = (REQUEST_ID_001, event_type, event_action)
-        assert get_basic_event_info(event_data) == expected
+def test_get_event_info():
+    for request in TEST_REQUESTS:
+        res = get_event_info(request)
+        event_action = request.json.get('action', 'UNKNOWN')
+        assert res['action'] == event_action
+        assert res['id'] == REQUEST_ID_001
+        event_type = request.headers['X-GitHub-Event']
+        assert res['type'] == event_type
 
 
 def test_process_event(tmpdir):
@@ -32,11 +34,11 @@ def test_process_event(tmpdir):
     os.environ['GITHUB_APP_SECRET_TOKEN'] = 'fake_app_secret_token'
     pyghee = ExamplePyGHee()
 
-    for event_data in EVENT_DATA:
-        event_type = event_data.headers['X-GitHub-Event']
-        event_action = event_data.json.get('action', 'UNKNOWN')
+    for request in TEST_REQUESTS:
+        event_info = get_event_info(request)
+        event_action, event_type = event_info['action'], event_info['type']
 
-        pyghee.process_event(event_data, dummy_abort_function, events_log_dir=events_log_dir,
+        pyghee.process_event(request, dummy_abort_function, events_log_dir=events_log_dir,
                              log_file=log_file, raise_error=True, verify=False)
 
         # check whether event data has been saved to events log dir
