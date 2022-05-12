@@ -27,7 +27,7 @@ def get_event_info(request):
     """
     event_info = {
         'action': request.json.get('action', UNKNOWN),
-        'id': request.headers['X-Request-Id'],
+        'id': request.headers['X-Github-Delivery'],
         'signature-sha1': request.headers['X-Hub-Signature'],
         'timestamp_raw': request.headers['Timestamp'],
         'type': request.headers['X-GitHub-Event'],
