@@ -13,6 +13,8 @@ import github
 import json
 import os
 import traceback
+from collections import namedtuple
+from requests.structures import CaseInsensitiveDict
 
 from .utils import create_file, error, log, log_warning
 
@@ -27,7 +29,7 @@ def get_event_info(request):
     """
     event_info = {
         'action': request.json.get('action', UNKNOWN),
-        'id': request.headers['X-Request-Id'],
+        'id': request.headers['X-Github-Delivery'],
         'signature-sha1': request.headers['X-Hub-Signature'],
         'timestamp_raw': request.headers['Timestamp'],
         'type': request.headers['X-GitHub-Event'],
@@ -45,6 +47,18 @@ def get_event_info(request):
     event_info['time'] = timestamp.isoformat().split('T')[1].split('.')[0].replace(':', '-')
 
     return event_info
+
+
+def read_event_from_json(jsonfile):
+    """
+    Read event data from a json file.
+    """
+    req = namedtuple('Request', ['headers', 'json'])
+    with open(jsonfile, 'r') as jf:
+        event_data = json.load(jf)
+        req.headers = CaseInsensitiveDict(event_data['headers'])
+        req.json = event_data['json']
+    return req
 
 
 class PyGHee(flask.Flask):
