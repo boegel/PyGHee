@@ -26,7 +26,7 @@ CREATE_BRANCH_REQUEST = Request(
         'Timestamp': TIMESTAMP_001,
         'X-GitHub-Event': EVENT_TYPE_CREATE,
         'X-Hub-Signature': 'sha1=0123456789abcedf0123456789abcedf01234567',  # fake signature!
-        'X-Request-Id': REQUEST_ID_001,
+        'X-Github-Delivery': REQUEST_ID_001,
     }, {
         # request.json
         'action': ACTION_CREATED,
@@ -41,7 +41,7 @@ ISSUE_COMMENT_CREATED_REQUEST = Request(
         'Timestamp': TIMESTAMP_001,
         'X-GitHub-Event': EVENT_TYPE_ISSUE_COMMENT,
         'X-Hub-Signature': 'sha1=0123456789abcedf0123456789abcedf01234567',  # fake signature!
-        'X-Request-Id': REQUEST_ID_001,
+        'X-Github-Delivery': REQUEST_ID_001,
     }, {
         # request.json
         'action': ACTION_CREATED,
