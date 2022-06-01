@@ -64,7 +64,7 @@ def test_process_event(tmpdir):
         expected_header = {
             'Timestamp': TIMESTAMP_001,
             'X-GitHub-Event': event_type,
-            'X-Request-Id': REQUEST_ID_001,
+            'X-GitHub-Delivery': REQUEST_ID_001,
         }
         with open(os.path.join(event_data_dir, header_fp), 'r') as fp:
             header_data = json.load(fp)
