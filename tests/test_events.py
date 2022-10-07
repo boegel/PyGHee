@@ -11,8 +11,9 @@ import json
 import os
 import re
 
-from pyghee.lib import get_event_info
+from pyghee.lib import get_event_info, read_event_from_json
 from pyghee.main import ExamplePyGHee
+from requests.structures import CaseInsensitiveDict
 
 from tests.event_data import REQUEST_ID_001, TIMESTAMP_001
 from tests.event_data import CREATE_BRANCH_REQUEST, ISSUE_COMMENT_CREATED_REQUEST
@@ -34,6 +35,28 @@ def test_get_event_info():
         assert res['id'] == REQUEST_ID_001
         event_type = request.headers['X-GitHub-Event']
         assert res['type'] == event_type
+
+
+def test_read_event_from_json(tmpdir):
+    test_json = os.path.join(tmpdir, 'test.json')
+    with open(test_json, 'w') as fp:
+        event_data = {
+            'headers': {
+                'Timestamp': '1654898255373',
+                'X-Github-Delivery': '5591ee40-e908-11ec-9119-f43ca5b71fc9',
+                'X-Github-Event': 'pull_request',
+                'X-Hub-Signature': 'sha1=6d13f2fbbf00f1bea70cbc26386b98adb6793dbd',
+            },
+            'json': {
+                'action': 'opened',
+            },
+        }
+        json.dump(event_data, fp)
+    res = read_event_from_json(test_json)
+    assert isinstance(res.headers, CaseInsensitiveDict)
+    assert res.headers['x-github-event'] == 'pull_request'
+    assert isinstance(res.json, dict)
+    assert res.json['action'] == 'opened'
 
 
 def test_process_event(tmpdir):

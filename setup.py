@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="PyGHee",
-    version="0.0.2",
+    version="0.0.3",
     author="Kenneth Hoste",
     author_email="kenneth.hoste@ugent.be",
     description="PyGHee (pronounced as 'piggy') is the GitHub Event Executor, a Python library to facilitate creating a GitHub App implemented in Python to process [events from GitHub",
