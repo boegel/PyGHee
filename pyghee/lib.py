@@ -84,6 +84,26 @@ class PyGHee(flask.Flask):
         else:
             del os.environ['GITHUB_APP_SECRET_TOKEN']
 
+        self.registered_events = []
+
+    def register_event(self, event_id):
+        """
+        Register event by ID.
+        Returns True if event is new, False is event is not new.
+        """
+        if event_id in self.registered_events:
+            return False
+        else:
+            self.registered_events.append(event_id)
+
+            # keep size of list of registered events under control,
+            # trim in half if maximum size has been reached
+            max_size = 10000
+            if len(self.registered_events) >= max_size:
+                self.registered_events = self.registered_events[max_size//2:]
+
+            return True
+
     def handle_event(self, event_info, log_file=None):
         """
         Handle event
@@ -164,10 +184,14 @@ class PyGHee(flask.Flask):
         """
         try:
             event_info = get_event_info(request)
-            self.log_event(event_info, events_log_dir=events_log_dir, log_file=log_file)
-            if verify:
-                self.verify_request(event_info, abort_function, log_file=log_file)
-            self.handle_event(event_info, log_file=log_file)
+            event_id = event_info['id']
+            if self.register_event(event_id):
+                self.log_event(event_info, events_log_dir=events_log_dir, log_file=log_file)
+                if verify:
+                    self.verify_request(event_info, abort_function, log_file=log_file)
+                self.handle_event(event_info, log_file=log_file)
+            else:
+                log("Duplicate event received, id: %s" % event_id)
         except Exception as err:
             if raise_error:
                 raise
