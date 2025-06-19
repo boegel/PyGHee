@@ -37,5 +37,4 @@ class ExamplePyGHee(PyGHee):
 if __name__ == '__main__':
     app = create_app(klass=ExamplePyGHee)
     log("App started!")
-    # stick to single thread so we can avoid processing duplicate event deliveries multiple times
-    waitress.serve(app, listen='*:3000', threads=1)
+    waitress.serve(app, listen='*:3000')

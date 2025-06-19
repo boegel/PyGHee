@@ -12,6 +12,7 @@ import hmac
 import github
 import json
 import os
+import threading
 import traceback
 from collections import namedtuple
 from requests.structures import CaseInsensitiveDict
@@ -94,13 +95,14 @@ class PyGHee(flask.Flask):
         if event_id in self.registered_events:
             return False
         else:
-            self.registered_events.append(event_id)
+            with threading.Lock():
+                self.registered_events.append(event_id)
 
-            # keep size of list of registered events under control,
-            # trim in half if maximum size has been reached
-            max_size = 10000
-            if len(self.registered_events) >= max_size:
-                self.registered_events = self.registered_events[max_size//2:]
+                # keep size of list of registered events under control,
+                # trim in half if maximum size has been reached
+                max_size = 10000
+                if len(self.registered_events) >= max_size:
+                    self.registered_events = self.registered_events[max_size//2:]
 
             return True
 
