@@ -1,0 +1,9 @@
+# Mac files
+.DS_Store
+
+# Python artifacts
+__pycache__
+
+# Application logs
+events_log
+pyghee.log

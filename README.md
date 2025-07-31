@@ -16,13 +16,11 @@ It takes care of:
 `PyGHee` depends on a couple of Python libraries:
 
 * [Flask](https://pypi.org/project/Flask), a simple framework for building complex web applications;
-* [PyGithub](https://pypi.org/project/PyGithub), a Python library to access the [GitHub REST API](https://docs.github.com/en/rest);
 * [waitress](https://pypi.org/project/waitress), a production-quality pure-Python [WSGI](https://www.python.org/dev/peps/pep-3333) server;
 
 For more specific information, like required versions, see [requirements.txt](requirements.txt).
 
 In addition:
-* a [GitHub Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) must be available via the `$GITHUB_TOKEN` environment variable;
 * the [GitHub app secret token](https://docs.github.com/en/developers/webhooks-and-events/webhooks/securing-your-webhooks) must be available via the `$GITHUB_APP_SECRET_TOKEN` environment variable;
 
 ## Installation
@@ -75,10 +73,10 @@ The `PyGHee` log file is named `pyghee.log` is located in the directory where th
 
 Event data is logged in JSON format in a directory named `events_log` that is located in the directory where the GitHub App is started.
 
-The logs are organised hierarchically, by *event type*, *event action*, *date* (in that order).
+The logs are organized hierarchically, by *event type*, *event action*, *date* (in that order).
 
 For each incoming event, two JSON files are created, one for:
-* the request headers including high-level information like the timestamp on which the event occured, etc.
+* the request headers including high-level information like the timestamp on which the event occurred, etc.
 * the request body including the actual event information (which depends on the event type).
 
 Here's an example of a single event that got logged: an issue commented that was created on 20 Feb 2022 at 14:23:27:
@@ -122,9 +120,8 @@ if __name__ == '__main__':
 
 To run your GitHub App:
 
-* Define environment variables for [GitHub Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) and [GitHub app secret token](https://docs.github.com/en/developers/webhooks-and-events/securing-your-webhooks):
+* Define an environment variables for the [GitHub app secret token](https://docs.github.com/en/developers/webhooks-and-events/securing-your-webhooks):
   ```
-  export GITHUB_TOKEN=...
   export GITHUB_APP_SECRET_TOKEN=...
   ```
 

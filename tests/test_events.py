@@ -65,7 +65,6 @@ def test_process_event(tmpdir):
     events_log_dir = os.path.join(tmpdir, 'events_log_dir')
     log_file = os.path.join(tmpdir, 'pyghee.log')
 
-    os.environ['GITHUB_TOKEN'] = 'fake_token'
     os.environ['GITHUB_APP_SECRET_TOKEN'] = 'fake_app_secret_token'
     pyghee = ExamplePyGHee()
 
@@ -121,7 +120,6 @@ def test_verify_request(tmpdir):
     """
     log_file = os.path.join(tmpdir, 'pyghee.log')
 
-    os.environ['GITHUB_TOKEN'] = 'fake_token'
     os.environ['GITHUB_APP_SECRET_TOKEN'] = TEST_SECRET_TOKEN
 
     pyghee = ExamplePyGHee()
