@@ -192,6 +192,9 @@ class PyGHee(flask.Flask):
                 tb_txt = ''.join(traceback.format_exception(None, err, err.__traceback__))
                 log_warning("A crash occurred!\n" + tb_txt, log_file=log_file)
 
+    @property
+    def gh(self):
+        raise Exception("The gh property and PyGithub dependency have been removed from PyGHee. To create and authenticate a github.GitHub object, follow PyGithub's documentation here: https://pygithub.readthedocs.io/en/stable/examples/Authentication.html")
 
 def create_app(klass=None):
     """
