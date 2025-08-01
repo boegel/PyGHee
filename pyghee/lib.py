@@ -41,7 +41,7 @@ def get_event_info(request):
         'raw_request_headers': dict(request.headers),
     })
 
-    timestamp = datetime.datetime.fromtimestamp(int(event_info['timestamp_raw'])/1000., datetime.UTC)
+    timestamp = datetime.datetime.fromtimestamp(int(event_info['timestamp_raw'])/1000., tz=datetime.UTC)
     event_info['timestamp'] = timestamp
     event_info['date'] = timestamp.isoformat().split('T')[0]
     event_info['time'] = timestamp.isoformat().split('T')[1].split('.')[0].replace(':', '-')
