@@ -16,6 +16,7 @@ It takes care of:
 `PyGHee` depends on a couple of Python libraries:
 
 * [Flask](https://pypi.org/project/Flask), a simple framework for building complex web applications;
+* [requests](https://pypi.org/project/requests/), a simple HTTP library that provides a CaseInsensitiveDict; 
 * [waitress](https://pypi.org/project/waitress), a production-quality pure-Python [WSGI](https://www.python.org/dev/peps/pep-3333) server;
 
 For more specific information, like required versions, see [requirements.txt](requirements.txt).
@@ -120,7 +121,7 @@ if __name__ == '__main__':
 
 To run your GitHub App:
 
-* Define an environment variables for the [GitHub app secret token](https://docs.github.com/en/developers/webhooks-and-events/securing-your-webhooks):
+* Define an environment variable for the [GitHub app secret token](https://docs.github.com/en/developers/webhooks-and-events/securing-your-webhooks):
   ```
   export GITHUB_APP_SECRET_TOKEN=...
   ```
