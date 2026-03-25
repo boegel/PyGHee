@@ -3,6 +3,7 @@
 # see https://github.com/boegel/pyghee
 #
 # author: Kenneth Hoste (@boegel)
+# author: Sondre Bergsvaag Risanger (@sondrebr)
 #
 # license: GPLv2
 #
@@ -20,23 +21,38 @@ from requests.structures import CaseInsensitiveDict
 from .utils import create_file, error, log, log_warning
 
 EVENTS_LOG_DIR = os.path.join(os.getcwd(), 'events_log')
+GITHUB = "github"
+GITLAB = "gitlab"
 SHA1 = 'sha1'
 UNKNOWN = 'UNKNOWN'
 
 
-def get_event_info(request):
+def get_event_info(request, event_source=GITHUB):
     """
     Extract event info from raw header data, and return result as Python dictionary value
     """
-    event_info = {
-        'action': request.json.get('action', UNKNOWN),
-        'id': request.headers['X-Github-Delivery'],
-        'signature-sha1': request.headers['X-Hub-Signature'],
-        'timestamp_raw': request.headers['Timestamp'],
-        'type': request.headers['X-GitHub-Event'],
-    }
+    if event_source == GITHUB:
+        event_info = {
+            'action': request.json.get('action', UNKNOWN),
+            'id': request.headers['X-Github-Delivery'],
+            'signature-sha1': request.headers['X-Hub-Signature'],
+            'type': request.headers['X-GitHub-Event'],
+        }
+    elif event_source == GITLAB:
+        object_attributes = request.json.get('object_attributes', {})
+        event_info = {
+            'action': object_attributes.get('action', UNKNOWN),
+            'id': request.headers['Idempotency-Key'],
+            # GitLab does not yet support signatures in webhooks
+            # However, it is possible to use e.g. a custom smee.io server to sign the event
+            'signature-sha1': request.headers.get('X-Gitlab-Signature', None),
+            'type': request.json.get("event_type", UNKNOWN),
+        }
+    else:
+        error(f"Unsupported event source: {event_source}")
 
     event_info.update({
+        'timestamp_raw': request.headers['Timestamp'],
         'raw_request_body': request.json,
         'raw_request_data': request.data,
         'raw_request_headers': dict(request.headers),
@@ -64,26 +80,38 @@ def read_event_from_json(jsonfile):
 
 class PyGHee(flask.Flask):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, event_source=GITHUB, *args, **kwargs):
         """
         PyGHee constructor.
         """
         super(PyGHee, self).__init__('PyGHee', *args, **kwargs)
+        self.event_source = event_source.lower()
 
-        github_token = os.getenv('GITHUB_TOKEN')
-        if github_token is None:
-            error("GitHub token is not available via $GITHUB_TOKEN!")
+        if self.event_source == GITHUB:
+            github_token = os.getenv('GITHUB_TOKEN')
+            if github_token is None:
+                error("GitHub token is not available via $GITHUB_TOKEN!")
+            else:
+                del os.environ['GITHUB_TOKEN']
+
+            self.gh = github.Github(github_token)
+
+            # see https://docs.github.com/en/developers/webhooks-and-events/securing-your-webhooks
+            self.github_app_secret_token = os.getenv('GITHUB_APP_SECRET_TOKEN')
+            if self.github_app_secret_token is None:
+                error("Webhook secret is not available via $GITHUB_APP_SECRET_TOKEN!")
+            else:
+                del os.environ['GITHUB_APP_SECRET_TOKEN']
+        elif self.event_source == GITLAB:
+            self.gitlab_webhook_secret_token = os.getenv('GITLAB_WEBHOOK_SECRET_TOKEN')
+            if self.gitlab_webhook_secret_token is None:
+                error("Webhook secret is not available via $GITLAB_WEBHOOK_SECRET_TOKEN!")
+            else:
+                del os.environ['GITLAB_WEBHOOK_SECRET_TOKEN']
         else:
-            del os.environ['GITHUB_TOKEN']
-
-        self.gh = github.Github(github_token)
-
-        # see https://docs.github.com/en/developers/webhooks-and-events/securing-your-webhooks
-        self.github_app_secret_token = os.getenv('GITHUB_APP_SECRET_TOKEN')
-        if self.github_app_secret_token is None:
-            error("Webhook secret is not available via $GITHUB_APP_SECRET_TOKEN!")
-        else:
-            del os.environ['GITHUB_APP_SECRET_TOKEN']
+            error_msg = f"'{self.event_source}' is not a supported webhook source."
+            error_msg += " Supported event_source values are 'github' and 'gitlab'."
+            error(error_msg)
 
         self.registered_events = []
 
@@ -164,7 +192,11 @@ class PyGHee(flask.Flask):
                 if signature_type == SHA1:
                     # see https://docs.python.org/3/library/hmac.html
                     request_data = event_info['raw_request_data']
-                    mac = hmac.new(self.github_app_secret_token.encode(), msg=request_data, digestmod=SHA1)
+                    if self.event_source == GITHUB:
+                        secret_token = self.github_app_secret_token
+                    elif self.event_source == GITLAB:
+                        secret_token = self.gitlab_webhook_secret_token
+                    mac = hmac.new(secret_token.encode(), msg=request_data, digestmod=SHA1)
                     if hmac.compare_digest(str(mac.hexdigest()), str(signature)):
                         log("Request verified: signature OK!", log_file=log_file)
                     else:
@@ -185,7 +217,7 @@ class PyGHee(flask.Flask):
         Logs a warning in case of crash while processing event.
         """
         try:
-            event_info = get_event_info(request)
+            event_info = get_event_info(request, self.event_source)
             event_id = event_info['id']
             if self.register_event(event_id):
                 self.log_event(event_info, events_log_dir=events_log_dir, log_file=log_file)
