@@ -24,6 +24,7 @@ EVENTS_LOG_DIR = os.path.join(os.getcwd(), 'events_log')
 GITHUB = "github"
 GITLAB = "gitlab"
 SHA1 = 'sha1'
+SHA256 = 'sha256'
 UNKNOWN = 'UNKNOWN'
 
 
@@ -36,6 +37,7 @@ def get_event_info(request, event_source=GITHUB):
             'action': request.json.get('action', UNKNOWN),
             'id': request.headers['X-Github-Delivery'],
             'signature-sha1': request.headers['X-Hub-Signature'],
+            'timestamp_raw': request.headers['Timestamp'],
             'type': request.headers['X-GitHub-Event'],
         }
     elif event_source == GITLAB:
@@ -45,14 +47,14 @@ def get_event_info(request, event_source=GITHUB):
             'id': request.headers['Idempotency-Key'],
             # GitLab does not yet support signatures in webhooks
             # However, it is possible to use e.g. a custom smee.io server to sign the event
-            'signature-sha1': request.headers.get('X-Gitlab-Signature', None),
+            'signature-sha1': request.headers['X-Gitlab-Signature-256'],
+            'timestamp_raw': request.headers['X-Gitlab-Timestamp'],
             'type': request.json.get("event_type", UNKNOWN),
         }
     else:
         error(f"Unsupported event source: {event_source}")
 
     event_info.update({
-        'timestamp_raw': request.headers['Timestamp'],
         'raw_request_body': request.json,
         'raw_request_data': request.data,
         'raw_request_headers': dict(request.headers),
@@ -189,21 +191,27 @@ class PyGHee(flask.Flask):
             header_parts = header_signature.split('=')
             if len(header_parts) == 2:
                 signature_type, signature = header_parts
-                if signature_type == SHA1:
+                if signature_type in (SHA1, SHA256):
                     # see https://docs.python.org/3/library/hmac.html
                     request_data = event_info['raw_request_data']
                     if self.event_source == GITHUB:
                         secret_token = self.github_app_secret_token
                     elif self.event_source == GITLAB:
+                        # GitLab creates the signature from '{timestamp}.{webhook_uuid}.{payload}',
+                        # see https://gitlab.com/gitlab-org/gitlab/-/work_items/19367
                         secret_token = self.gitlab_webhook_secret_token
-                    mac = hmac.new(secret_token.encode(), msg=request_data, digestmod=SHA1)
+                        ts = event_info['timestamp_raw']
+                        webhook_uuid = event_info['raw_request_headers'].get('X-Gitlab-Webhook-UUID')
+                        components = [ts.encode('utf8'), webhook_uuid.encode('utf8'), request_data]
+                        request_data = b'.'.join(components)
+                    mac = hmac.new(secret_token.encode(), msg=request_data, digestmod=signature_type)
                     if hmac.compare_digest(str(mac.hexdigest()), str(signature)):
                         log("Request verified: signature OK!", log_file=log_file)
                     else:
                         log_warning("Faulty signature in request header => 403", log_file=log_file)
                         abort_function(403)
                 else:
-                    # we only know how to verify a SHA1 signature
+                    # we only know how to verify SHA1 and SHA256 signatures
                     log_warning("Uknown type of signature (%s) => 501" % signature_type, log_file=log_file)
                     abort_function(501)
             else:
