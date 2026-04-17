@@ -201,7 +201,7 @@ class PyGHee(flask.Flask):
                         # see https://gitlab.com/gitlab-org/gitlab/-/work_items/19367
                         secret_token = self.gitlab_webhook_secret_token
                         ts = event_info['timestamp_raw']
-                        webhook_uuid = event_info['raw_request_headers'].get('X-Gitlab-Webhook-UUID')
+                        webhook_uuid = event_info['raw_request_headers'].get('X-Gitlab-Webhook-Uuid')
                         components = [ts.encode('utf8'), webhook_uuid.encode('utf8'), request_data]
                         request_data = b'.'.join(components)
                     mac = hmac.new(secret_token.encode(), msg=request_data, digestmod=signature_type)
