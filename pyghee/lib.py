@@ -48,8 +48,6 @@ def get_event_info(request, event_source=GITHUB):
         event_info = {
             'action': object_attributes.get('action', UNKNOWN),
             'id': request.headers['Webhook-Id'],
-            # GitLab does not yet support signatures in webhooks
-            # However, it is possible to use e.g. a custom smee.io server to sign the event
             'signature-sha1': request.headers['Webhook-Signature'],
             'timestamp_raw': request.headers['Webhook-Timestamp'],
             'type': request.json.get("event_type", UNKNOWN),
@@ -185,7 +183,8 @@ class PyGHee(flask.Flask):
     def verify_request(self, event_info, abort_function, log_file=None):
         """
         Verify request by checking webhook secret in request header.
-        Webhook secret must also be available in $GITHUB_APP_SECRET_TOKEN environment variable.
+        Webhook secret must also be available in $GITHUB_APP_SECRET_TOKEN
+        or $GITLAB_WEBHOOK_SECRET_TOKEN environment variable.
         """
 
         header_signature = event_info['signature-sha1']
@@ -193,12 +192,14 @@ class PyGHee(flask.Flask):
         if header_signature is None:
             log_warning("Missing signature in request header => 403", log_file=log_file)
             abort_function(403)
-        # GitLab uses "v1,<b64sign>" format for signatures (Standard Webhooks specification)
-        # https://www.standardwebhooks.com/
-        elif header_signature.startswith(STANDARD_WEBHOOKS_SIGN_PREFIX):
-            if self.event_source != GITLAB:
-                log_warning("Received Standard Webhook while configured for '%s' => 501" % self.event_source,
-                            log_file=log_file)
+        # GitLab uses "v1,<b64sign>" format for signatures
+        # https://docs.gitlab.com/user/project/integrations/webhooks/#signing-tokens
+        elif self.event_source == GITLAB:
+            # GitLab sends a space-separated list of signatures
+            signatures = header_signature.split(" ")
+
+            if not any(signature.startswith("v1,") for signature in signatures):
+                log_warning("No known signature types in request header => 501", log_file=log_file)
                 abort_function(501)
 
             user_agent = event_info['raw_request_headers'].get("User-Agent", "")
@@ -217,20 +218,19 @@ class PyGHee(flask.Flask):
             request_data = event_info['raw_request_data']
             components = (webhook_id, timestamp, request_data)
             mac = hmac.new(key, msg=b'.'.join(components), digestmod=SHA256)
-            actual_signature = base64.standard_b64encode(mac.digest()).decode()
-            expected_signature = header_signature.removeprefix(STANDARD_WEBHOOKS_SIGN_PREFIX)
-            verified = hmac.compare_digest(str(actual_signature), str(expected_signature))
+            expected_signature = "v1," + base64.standard_b64encode(mac.digest()).decode()
+            verified = any(hmac.compare_digest(expected_signature, signature) for signature in signatures)
         # GitHub uses "sha<#>=<hexsign>" signature format
         else:
             header_parts = header_signature.split('=')
             if len(header_parts) == 2:
-                signature_type, expected_signature = header_parts
+                signature_type, signature = header_parts
                 if signature_type == SHA1:
                     # see https://docs.python.org/3/library/hmac.html
                     request_data = event_info['raw_request_data']
                     secret_token = self.github_app_secret_token
                     mac = hmac.new(secret_token.encode(), msg=request_data, digestmod=signature_type)
-                    verified = hmac.compare_digest(str(mac.hexdigest()), str(expected_signature))
+                    verified = hmac.compare_digest(str(mac.hexdigest()), str(signature))
                 else:
                     # we only know how to verify SHA1 signatures
                     log_warning("Uknown type of signature (%s) => 501" % signature_type, log_file=log_file)
