@@ -43,6 +43,7 @@ def get_event_info(request, event_source=GITHUB):
             'timestamp_raw': request.headers['Timestamp'],
             'type': request.headers['X-GitHub-Event'],
         }
+        ts = int(event_info['timestamp_raw'])/1000.
     elif event_source == GITLAB:
         object_attributes = request.json.get('object_attributes', {})
         event_info = {
@@ -52,6 +53,7 @@ def get_event_info(request, event_source=GITHUB):
             'timestamp_raw': request.headers['Webhook-Timestamp'],
             'type': request.json.get("event_type", UNKNOWN),
         }
+        ts = int(event_info['timestamp_raw'])
     else:
         error(f"Unsupported event source: {event_source}")
 
@@ -61,10 +63,11 @@ def get_event_info(request, event_source=GITHUB):
         'raw_request_headers': dict(request.headers),
     })
 
-    timestamp = datetime.datetime.utcfromtimestamp(int(event_info['timestamp_raw'])/1000.)
+    timestamp = datetime.datetime.fromtimestamp(ts, tz=datetime.UTC)
+    iso_timestamp = timestamp.isoformat(timespec="seconds")
     event_info['timestamp'] = timestamp
-    event_info['date'] = timestamp.isoformat().split('T')[0]
-    event_info['time'] = timestamp.isoformat().split('T')[1].split('.')[0].replace(':', '-')
+    event_info['date'] = iso_timestamp.split('T')[0]
+    event_info['time'] = iso_timestamp.split('T')[1].split('+')[0].replace(':', '-')
 
     return event_info
 
