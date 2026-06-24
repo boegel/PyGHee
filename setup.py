@@ -8,7 +8,7 @@ setuptools.setup(
     version="0.1.0",
     author="Kenneth Hoste",
     author_email="kenneth.hoste@ugent.be",
-    description="PyGHee (pronounced as 'piggy') is the GitHub Event Executor, a Python library to facilitate creating a GitHub App implemented in Python to process [events from GitHub",
+    description="PyGHee (pronounced as 'piggy') is the GitHub Event Executor, a Python library to facilitate creating a GitHub App implemented in Python to process events from GitHub",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/boegel/pyghee",
@@ -24,7 +24,7 @@ setuptools.setup(
     python_requires=">=3.6",
     install_requires=[
         "Flask",
-        "PyGithub",
+        "requests",
         "waitress",
    ],
 )

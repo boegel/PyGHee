@@ -9,7 +9,6 @@
 import datetime
 import flask
 import hmac
-import github
 import json
 import os
 import threading
@@ -42,7 +41,7 @@ def get_event_info(request):
         'raw_request_headers': dict(request.headers),
     })
 
-    timestamp = datetime.datetime.utcfromtimestamp(int(event_info['timestamp_raw'])/1000.)
+    timestamp = datetime.datetime.fromtimestamp(int(event_info['timestamp_raw'])/1000., tz=datetime.UTC)
     event_info['timestamp'] = timestamp
     event_info['date'] = timestamp.isoformat().split('T')[0]
     event_info['time'] = timestamp.isoformat().split('T')[1].split('.')[0].replace(':', '-')
@@ -69,14 +68,6 @@ class PyGHee(flask.Flask):
         PyGHee constructor.
         """
         super(PyGHee, self).__init__('PyGHee', *args, **kwargs)
-
-        github_token = os.getenv('GITHUB_TOKEN')
-        if github_token is None:
-            error("GitHub token is not available via $GITHUB_TOKEN!")
-        else:
-            del os.environ['GITHUB_TOKEN']
-
-        self.gh = github.Github(github_token)
 
         # see https://docs.github.com/en/developers/webhooks-and-events/securing-your-webhooks
         self.github_app_secret_token = os.getenv('GITHUB_APP_SECRET_TOKEN')
@@ -172,7 +163,7 @@ class PyGHee(flask.Flask):
                         abort_function(403)
                 else:
                     # we only know how to verify a SHA1 signature
-                    log_warning("Uknown type of signature (%s) => 501" % signature_type, log_file=log_file)
+                    log_warning("Unknown type of signature (%s) => 501" % signature_type, log_file=log_file)
                     abort_function(501)
             else:
                 log_warning("Type of signature not specified (%s) => 501" % header_signature, log_file=log_file)
@@ -201,6 +192,9 @@ class PyGHee(flask.Flask):
                 tb_txt = ''.join(traceback.format_exception(None, err, err.__traceback__))
                 log_warning("A crash occurred!\n" + tb_txt, log_file=log_file)
 
+    @property
+    def gh(self):
+        raise Exception("The gh property and PyGithub dependency have been removed from PyGHee. To create and authenticate a github.GitHub object, follow PyGithub's documentation here: https://pygithub.readthedocs.io/en/stable/examples/Authentication.html")
 
 def create_app(klass=None):
     """
