@@ -63,7 +63,7 @@ def get_event_info(request, event_source=GITHUB):
         'raw_request_headers': dict(request.headers),
     })
 
-    timestamp = datetime.datetime.fromtimestamp(ts, tz=datetime.UTC)
+    timestamp = datetime.datetime.fromtimestamp(ts, tz=datetime.timezone.utc)
     iso_timestamp = timestamp.isoformat(timespec="seconds")
     event_info['timestamp'] = timestamp
     event_info['date'] = iso_timestamp.split('T')[0]
