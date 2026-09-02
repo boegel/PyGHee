@@ -36,14 +36,20 @@ def get_event_info(request, event_source=GITHUB):
     Extract event info from raw header data, and return result as Python dictionary value
     """
     if event_source == GITHUB:
+        timestamp_raw = request.headers.get('Timestamp')
+        if timestamp_raw is None:
+            timestamp_raw = int(
+                datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000
+            )
+
         event_info = {
             'action': request.json.get('action', UNKNOWN),
             'id': request.headers['X-Github-Delivery'],
             'signature-sha1': request.headers['X-Hub-Signature'],
-            'timestamp_raw': request.headers['Timestamp'],
+            'timestamp_raw': timestamp_raw,
             'type': request.headers['X-GitHub-Event'],
         }
-        ts = int(event_info['timestamp_raw'])/1000.
+        ts = int(event_info['timestamp_raw']) / 1000.
     elif event_source == GITLAB:
         object_attributes = request.json.get('object_attributes', {})
         event_info = {
